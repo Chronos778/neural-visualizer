@@ -474,6 +474,14 @@ footer p {
         grid-template-rows: auto auto;
     }
     
+    .drawing-section {
+        grid-column: 1;
+    }
+    
+    .results-section {
+        grid-column: 2;
+    }
+    
     .visualization-section {
         grid-column: 1 / -1;
         order: 3;
@@ -498,13 +506,15 @@ footer p {
     }
     
     .main-content {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
         gap: 16px;
     }
     
     section {
         padding: 20px;
         border-radius: 16px;
+        width: 100%;
     }
     
     .drawing-section {
@@ -520,8 +530,10 @@ footer p {
     }
     
     #drawingCanvas {
-        width: 260px;
-        height: 260px;
+        width: 100%;
+        max-width: 280px;
+        height: auto;
+        aspect-ratio: 1;
     }
     
     .pixel-preview {
