@@ -4,7 +4,16 @@
   <img src="demo.gif" alt="Demo" width="800">
 </p>
 
+<p align="center">
+  <a href="https://neural-visualizer-46f1.onrender.com">🌐 Live Demo</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-features">Features</a> •
+  <a href="#-deployment">Deployment</a>
+</p>
+
 A beautiful, interactive web application that visualizes how a neural network recognizes handwritten digits in real-time. Draw a digit and watch the network's neurons activate as it makes predictions.
+
+> **🔗 Try it now:** [https://neural-visualizer-46f1.onrender.com](https://neural-visualizer-46f1.onrender.com)
 
 ## ✨ Features
 
@@ -193,7 +202,63 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📝 License
+## � Deployment
+
+### Option 1: Full Stack on Render (Current Setup)
+
+Deploy the entire app (backend + frontend) to Render:
+
+1. Push to GitHub
+2. Create a **Web Service** on [render.com](https://render.com)
+3. Connect your GitHub repo
+4. Settings:
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `gunicorn server:app`
+5. Deploy!
+
+### Option 2: Frontend Only (Static Hosting)
+
+If you want to host just the frontend separately (faster, free):
+
+#### **GitHub Pages** (Free)
+```bash
+# Create gh-pages branch with only frontend files
+git checkout -b gh-pages
+# Keep only: index.html, styles.css, app.js, visualization.js, network.js
+git add index.html styles.css app.js visualization.js network.js
+git commit -m "Frontend only"
+git push origin gh-pages
+```
+Then enable GitHub Pages in repo settings → Pages → Source: `gh-pages`
+
+#### **Netlify** (Free)
+1. Go to [netlify.com](https://netlify.com)
+2. Drag & drop your frontend folder (html, css, js files)
+3. Done! Get a free `.netlify.app` URL
+
+#### **Vercel** (Free)
+1. Install: `npm i -g vercel`
+2. Run: `vercel` in your project folder
+3. Follow prompts
+
+#### **Cloudflare Pages** (Free)
+1. Go to [pages.cloudflare.com](https://pages.cloudflare.com)
+2. Connect GitHub repo
+3. Set build output to `/` (root)
+
+> ⚠️ **Note:** Frontend-only hosting requires the backend to be hosted separately. Update `network.js` to point to your backend URL.
+
+### Option 3: Separate Frontend + Backend
+
+**Backend (API):** Deploy to Render, Railway, or Heroku
+**Frontend:** Deploy to Netlify, Vercel, or GitHub Pages
+
+Update `network.js`:
+```javascript
+const API_URL = 'https://your-backend-url.onrender.com';
+```
+
+## �📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
