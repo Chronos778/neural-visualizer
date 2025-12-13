@@ -1,0 +1,8 @@
+# Requirements for the neural network backend
+flask==3.0.0
+flask-cors==4.0.0
+tensorflow==2.15.0
+numpy==1.26.2
+Pillow==10.1.0
+scipy==1.11.4
+gunicorn==21.2.0
