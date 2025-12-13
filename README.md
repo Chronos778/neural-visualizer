@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://neural-visualizer-46f1.onrender.com">🌐 Live Demo</a> •
+  <a href="https://neural-visualizer-production.up.railway.app">🌐 Live Demo</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-features">Features</a> •
   <a href="#-deployment">Deployment</a>
@@ -13,7 +13,7 @@
 
 A beautiful, interactive web application that visualizes how a neural network recognizes handwritten digits in real-time. Draw a digit and watch the network's neurons activate as it makes predictions.
 
-> **🔗 Try it now:** [https://neural-visualizer-46f1.onrender.com](https://neural-visualizer-46f1.onrender.com)
+> **🔗 Try it now:** [https://neural-visualizer-production.up.railway.app](https://neural-visualizer-production.up.railway.app)
 
 ## ✨ Features
 
@@ -36,8 +36,8 @@ A beautiful, interactive web application that visualizes how a neural network re
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/neural-network-visualizer.git
-   cd neural-network-visualizer
+   git clone https://github.com/Chronos778/neural-visualizer.git
+   cd neural-visualizer
    ```
 
 2. **Install dependencies**
@@ -123,6 +123,15 @@ Stacked layout optimized for touch interaction on smaller screens.
 
 ## 🌐 Deployment
 
+### Deploy to Railway (Recommended)
+
+1. Go to [railway.app](https://railway.app) and sign in with GitHub
+2. Click **"New Project"** → **"Deploy from GitHub repo"**
+3. Select your repository
+4. Railway auto-detects Python and uses `requirements.txt` + `Procfile`
+5. Go to **Settings** → **Networking** → **Generate Domain**
+6. Your app is live! 🚀
+
 ### Deploy to Render (Free)
 
 1. Push to GitHub
@@ -131,20 +140,10 @@ Stacked layout optimized for touch interaction on smaller screens.
 4. Connect your GitHub repo
 5. Configure:
    - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `gunicorn server:app`
+   - **Start Command**: `gunicorn server:app --timeout 120 --workers 1`
 6. Deploy!
 
-### Deploy to Heroku
-
-```bash
-heroku create your-app-name
-git push heroku main
-```
-
-### Deploy to Railway
-
-1. Connect GitHub repo at [railway.app](https://railway.app)
-2. Railway auto-detects Python and deploys
+> Note: Render free tier has 512MB RAM limit which may cause TensorFlow issues.
 
 ## 🔧 Configuration
 
