@@ -1,7 +1,7 @@
 # Requirements for the neural network backend
 flask>=3.0.0
 flask-cors>=4.0.0
-tensorflow>=2.15.0
+tensorflow-cpu>=2.15.0
 numpy>=1.26.0
 Pillow>=10.0.0
 scipy>=1.11.0

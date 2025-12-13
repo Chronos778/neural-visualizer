@@ -8,7 +8,20 @@ import json
 import numpy as np
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+
+# Limit TensorFlow memory usage for free tier hosting
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
 import tensorflow as tf
+
+# Configure TensorFlow to use minimal memory
+tf.config.set_soft_device_placement(True)
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
+
 from tensorflow import keras
 from tensorflow.keras import layers
 import base64
@@ -90,7 +103,7 @@ def train_model():
     history = model.fit(
         x_train, y_train,
         batch_size=128,
-        epochs=10,
+        epochs=3,
         validation_split=0.1,
         verbose=1
     )
