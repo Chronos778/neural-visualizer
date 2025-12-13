@@ -292,15 +292,17 @@ def retrain():
         return jsonify({'error': str(e)}), 500
 
 
+# Initialize model when module is imported (for gunicorn)
+print("=" * 50)
+print("MNIST Neural Network Backend")
+print("=" * 50)
+
+# Load or train model at startup
+load_model()
+
+print("Model ready!")
+print("=" * 50)
+
 if __name__ == '__main__':
-    print("=" * 50)
-    print("MNIST Neural Network Backend")
-    print("=" * 50)
-    
-    # Load or train model
-    load_model()
-    
     print("\nStarting server on http://localhost:5000")
-    print("=" * 50)
-    
     app.run(host='0.0.0.0', port=5000, debug=False)
