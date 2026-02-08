@@ -62,8 +62,8 @@ body {
 .shell {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    min-height: 0;
+    min-height: 100vh;
+    height: auto;
 }
 
 /* ════════════════════════════════════════════════════════
@@ -145,7 +145,7 @@ body {
 
 .pane {
     overflow-y: auto;
-    padding: 20px;
+    padding: clamp(16px, 2vw, 24px);
 }
 .pane::-webkit-scrollbar { width: 5px; }
 .pane::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 3px; }
@@ -174,6 +174,7 @@ body {
     flex-direction: column;
     gap: 16px;
     background: var(--bg-raised);
+    min-height: 0;
 }
 
 /* ── Pane headers ── */
@@ -212,7 +213,7 @@ body {
 }
 #drawingCanvas {
     width: 100%;
-    max-width: 260px;
+    max-width: clamp(240px, 55vw, 340px);
     aspect-ratio: 1;
     background: #000;
     border: 1px solid var(--rule-light);
@@ -536,6 +537,10 @@ body {
 @media (max-width: 900px) {
     .workbench {
         flex-direction: column;
+        gap: 18px;
+    }
+    .pane {
+        overflow: visible;
     }
     .pane--input {
         width: 100%;
@@ -543,20 +548,48 @@ body {
         min-width: 0;
     }
     .divider {
-        width: auto;
-        height: 2px;
+        display: none;
     }
     .pane--output {
-        min-height: 400px;
+        min-height: 0;
+        border-top: 1px solid var(--rule);
+        padding-top: 8px;
     }
     .readout {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+}
+
+@media (max-width: 720px) {
+    .strip {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 10px 14px;
+        gap: 6px;
+    }
+    .strip__left,
+    .strip__right {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .strip__right {
+        justify-content: flex-start;
+    }
+    .pane__head {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .scope__legend {
         flex-wrap: wrap;
     }
 }
 
 /* Phones */
 @media (max-width: 560px) {
-    .strip { padding: 0 12px; }
+    .strip {
+        padding: 8px 12px;
+    }
     .strip__title { font-size: 0.85rem; }
     .pane { padding: 14px; }
     .readout {
@@ -571,9 +604,29 @@ body {
     }
     .readout__digit { font-size: 2.5rem; }
     .readout__bars { gap: 2px; }
-    .toolbar { flex-direction: column; }
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .tb-btn {
+        width: 100%;
+        justify-content: center;
+    }
     .tb-slider { width: 100%; }
     .scope__screen { min-height: 220px; }
+    .prob-row { gap: 8px; }
+    .prob-value { min-width: 30px; font-size: 0.5rem; }
+    .pane__head { flex-direction: column; align-items: flex-start; }
+    .scope__legend { justify-content: flex-start; }
+}
+
+@media (max-width: 400px) {
+    .strip__title { font-size: 0.78rem; }
+    .readout__digit { font-size: 2.2rem; }
+    .pane__tag { font-size: 0.58rem; letter-spacing: 1px; }
+    .prob-label { width: 16px; height: 16px; font-size: 0.5rem; }
+    .pane__head { gap: 4px; }
 }
 
 /* Touch */
