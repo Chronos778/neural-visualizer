@@ -102,28 +102,28 @@ class NetworkVisualizer {
         for (let s = 0; s < srcPos.length; s++) {
             const sp = srcPos[s];
             const sa = Math.abs(srcAct[sp.nodeIndex] || 0);
-            if (sa < 0.04) continue;
+            if (sa < 0.015) continue;
 
             for (let t = 0; t < tgtPos.length; t++) {
                 const tp = tgtPos[t];
                 const ta = Math.abs(tgtAct[tp.nodeIndex] || 0);
-                if (ta < 0.04) continue;
+                if (ta < 0.015) continue;
 
                 const strength = Math.sqrt(sa * ta);
-                const alpha = Math.min(0.55, strength * 0.8);
-                if (alpha < 0.04) continue;
+                const alpha = Math.min(0.55, Math.max(0.12, strength * 0.8));
 
-                // warm amber → teal gradient
+                // warm amber → teal gradient with better visibility for weak connections
+                const baseAlpha = strength < 0.08 ? alpha * 0.6 : alpha;
                 const grad = ctx.createLinearGradient(sp.x, sp.y, tp.x, tp.y);
-                grad.addColorStop(0,   `rgba(232,164,74,${alpha * 0.45})`);
-                grad.addColorStop(0.5, `rgba(62,201,167,${alpha})`);
-                grad.addColorStop(1,   `rgba(232,164,74,${alpha * 0.45})`);
+                grad.addColorStop(0,   `rgba(232,164,74,${baseAlpha * 0.45})`);
+                grad.addColorStop(0.5, `rgba(62,201,167,${baseAlpha})`);
+                grad.addColorStop(1,   `rgba(232,164,74,${baseAlpha * 0.45})`);
 
                 ctx.beginPath();
                 ctx.moveTo(sp.x, sp.y);
                 ctx.lineTo(tp.x, tp.y);
                 ctx.strokeStyle = grad;
-                ctx.lineWidth = Math.max(0.4, strength * 2);
+                ctx.lineWidth = Math.max(0.5, strength * 2);
                 ctx.stroke();
             }
         }
@@ -142,11 +142,16 @@ class NetworkVisualizer {
             fill   = `rgba(62,201,167,${0.55 + t * 0.45})`;
             stroke = '#3EC9A7';
             glow   = this.colors.coolGlow;
-        } else if (act > 0.1) {
-            const t = act / 0.5;
-            fill   = `rgba(232,164,74,${0.35 + t * 0.5})`;
+        } else if (act > 0.2) {
+            const t = (act - 0.2) / 0.3;
+            fill   = `rgba(232,164,74,${0.3 + t * 0.5})`;
             stroke = '#E8A44A';
             glow   = this.colors.hotGlow;
+        } else if (act > 0.05) {
+            // subtle activation for weak signals
+            fill   = `rgba(232,164,74,0.25)`;
+            stroke = '#6B5F3F';
+            glow   = null;
         } else {
             fill   = this.colors.dim;
             stroke = this.colors.dimStroke;
