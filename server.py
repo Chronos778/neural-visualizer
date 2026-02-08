@@ -6,7 +6,7 @@ Trains a CNN model and provides REST API for digit recognition
 import os
 import json
 import numpy as np
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 # Limit TensorFlow memory usage for free tier hosting
@@ -28,19 +28,19 @@ import base64
 from io import BytesIO
 from PIL import Image
 
-# Serve static files from /static and templates from /templates
-app = Flask(__name__, static_folder='static', template_folder='templates')
+# Serve static files from current directory
+app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)  # Enable CORS for frontend
 
 # Global model variable
 model = None
-MODEL_PATH = os.path.join('models', 'mnist_model.keras')
+MODEL_PATH = 'mnist_model.keras'
 
 
 # Serve the main page
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return send_from_directory('.', 'index.html')
 
 def create_model():
     """Create a CNN model for MNIST digit recognition"""

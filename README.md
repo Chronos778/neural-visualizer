@@ -38,14 +38,13 @@ Open `http://localhost:5000` in your browser.
 ## Project Structure
 
 ```
-├── server.py                        # Flask backend & model
-├── templates/index.html             # Main page template
-├── static/css/styles.css            # Styling
-├── static/js/app.js                 # Drawing & UI logic
-├── static/js/network.js             # API client
-├── static/js/visualization.js       # Network visualization
-├── models/mnist_model.keras         # Saved CNN weights
-└── requirements.txt                 # Dependencies
+├── server.py           # Flask backend & model
+├── index.html          # Main page
+├── styles.css          # Styling
+├── app.js              # Drawing & UI logic
+├── network.js          # API client
+├── visualization.js    # Network visualization
+└── requirements.txt    # Dependencies
 ```
 
 ## License
