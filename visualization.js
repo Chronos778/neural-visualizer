@@ -1,6 +1,6 @@
 /**
- * Network Visualization Module
- * Renders the neural network architecture and activations on canvas
+ * Network Visualization — "Oscilloscope" renderer
+ * Warm amber / teal on near-black CRT background
  */
 
 class NetworkVisualizer {
@@ -9,308 +9,243 @@ class NetworkVisualizer {
         this.ctx = canvas.getContext('2d');
         this.width = canvas.width;
         this.height = canvas.height;
-        
-        // Visualization settings
+        this.dpr = window.devicePixelRatio || 1;
+
         this.layerPositions = [];
-        this.nodeRadius = 10;
-        this.maxNodesPerLayer = 20;
-        
-        // Colors - dark theme with glow effects
+        this.nodeRadius = 8;
+
+        // Analog-instrument palette
         this.colors = {
-            positive: '#10b981',
-            negative: '#ef4444',
-            neutral: '#3f3f5a',
-            background: '#0f0f17',
-            cardBg: '#1a1a25',
-            text: '#f0f0f5',
-            textSecondary: '#8888a0',
-            accent: '#6366f1',
-            accentGlow: 'rgba(99, 102, 241, 0.5)',
-            positiveGlow: 'rgba(16, 185, 129, 0.6)',
-            connectionActive: 'rgba(99, 102, 241, 0.4)'
+            hot:        '#E8A44A',   // ember / amber
+            hotGlow:    'rgba(232,164,74,0.55)',
+            cool:       '#3EC9A7',   // teal
+            coolGlow:   'rgba(62,201,167,0.45)',
+            dim:        '#2E2C28',
+            dimStroke:  '#4E4B47',
+            bg:         '#0E110D',
+            text:       '#F0EBE1',
+            textDim:    '#918C82',
+            wire:       'rgba(232,164,74,0.25)',
+            wireHot:    'rgba(62,201,167,0.6)',
         };
-        
+
+        this.setupLayers();
+    }
+
+    /* ── fit canvas to parent container ── */
+    resize() {
+        const parent = this.canvas.parentElement;
+        if (!parent) return;
+        const w = parent.clientWidth;
+        const h = parent.clientHeight;
+        this.canvas.width  = w * this.dpr;
+        this.canvas.height = h * this.dpr;
+        this.canvas.style.width  = w + 'px';
+        this.canvas.style.height = h + 'px';
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        this.width  = w;
+        this.height = h;
         this.setupLayers();
     }
 
     setupLayers() {
-        const padding = 80;
-        const layerSpacing = (this.width - 2 * padding) / 3;
-        
+        const pad = 70;
+        const sp  = (this.width - 2 * pad) / 3;
+
         this.layerPositions = [
-            { x: padding, name: 'Input', subtext: '784 neurons', displaySize: 18 },
-            { x: padding + layerSpacing, name: 'Hidden 1', subtext: '128 neurons', displaySize: 18 },
-            { x: padding + layerSpacing * 2, name: 'Hidden 2', subtext: '64 neurons', displaySize: 16 },
-            { x: padding + layerSpacing * 3, name: 'Output', subtext: '10 classes', displaySize: 10 }
+            { x: pad,          name: 'INPUT',    sub: '784',  displaySize: 16 },
+            { x: pad + sp,     name: 'HIDDEN-1', sub: '128',  displaySize: 16 },
+            { x: pad + sp * 2, name: 'HIDDEN-2', sub: '64',   displaySize: 14 },
+            { x: pad + sp * 3, name: 'OUTPUT',   sub: '10',   displaySize: 10 },
         ];
     }
 
     clear() {
-        // Create gradient background
-        const gradient = this.ctx.createLinearGradient(0, 0, 0, this.height);
-        gradient.addColorStop(0, this.colors.background);
-        gradient.addColorStop(1, this.colors.cardBg);
-        this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(0, 0, this.width, this.height);
-        
-        // Add subtle grid pattern
-        this.ctx.strokeStyle = 'rgba(99, 102, 241, 0.03)';
-        this.ctx.lineWidth = 1;
-        const gridSize = 30;
-        for (let x = 0; x < this.width; x += gridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.height);
-            this.ctx.stroke();
+        const ctx = this.ctx;
+        ctx.fillStyle = this.colors.bg;
+        ctx.fillRect(0, 0, this.width, this.height);
+
+        // subtle cross-hatch grid (oscilloscope reticle)
+        ctx.strokeStyle = 'rgba(240,235,225,0.03)';
+        ctx.lineWidth = 0.5;
+        const g = 28;
+        for (let x = 0; x < this.width; x += g) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, this.height); ctx.stroke();
         }
-        for (let y = 0; y < this.height; y += gridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.width, y);
-            this.ctx.stroke();
+        for (let y = 0; y < this.height; y += g) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(this.width, y); ctx.stroke();
         }
     }
 
-    // Calculate node positions for a layer
     getNodePositions(layerIndex, numNodes) {
         const layer = this.layerPositions[layerIndex];
-        const displayNodes = Math.min(numNodes, layer.displaySize);
+        const dn = Math.min(numNodes, layer.displaySize);
+        const topPad = 40, botPad = 48;
+        const avail = this.height - topPad - botPad;
+        const sp = avail / (dn - 1 || 1);
         const positions = [];
-        
-        const topPadding = 50;
-        const bottomPadding = 50;
-        const availableHeight = this.height - topPadding - bottomPadding;
-        const spacing = availableHeight / (displayNodes - 1 || 1);
-        
-        for (let i = 0; i < displayNodes; i++) {
+        for (let i = 0; i < dn; i++) {
             positions.push({
                 x: layer.x,
-                y: topPadding + i * spacing,
-                nodeIndex: Math.floor(i * numNodes / displayNodes)
+                y: topPad + i * sp,
+                nodeIndex: Math.floor(i * numNodes / dn)
             });
         }
-        
         return positions;
     }
 
-    // Draw connections between layers - simplified version
-    drawConnections(sourcePositions, targetPositions, sourceActivations, targetActivations) {
-        if (!sourceActivations || !targetActivations) return;
-        
+    /* ── connections ── */
+    drawConnections(srcPos, tgtPos, srcAct, tgtAct) {
+        if (!srcAct || !tgtAct) return;
         const ctx = this.ctx;
-        
-        // Draw connections from active source nodes to active target nodes
-        for (let s = 0; s < sourcePositions.length; s++) {
-            const sourcePos = sourcePositions[s];
-            const sourceAct = Math.abs(sourceActivations[sourcePos.nodeIndex] || 0);
-            
-            if (sourceAct < 0.05) continue;
-            
-            for (let t = 0; t < targetPositions.length; t++) {
-                const targetPos = targetPositions[t];
-                const targetAct = Math.abs(targetActivations[targetPos.nodeIndex] || 0);
-                
-                if (targetAct < 0.05) continue;
-                
-                const strength = Math.sqrt(sourceAct * targetAct);
-                const alpha = Math.min(0.6, strength * 0.9);
-                
-                if (alpha < 0.05) continue;
-                
-                // Create gradient for connection
-                const gradient = ctx.createLinearGradient(sourcePos.x, sourcePos.y, targetPos.x, targetPos.y);
-                gradient.addColorStop(0, `rgba(99, 102, 241, ${alpha * 0.5})`);
-                gradient.addColorStop(0.5, `rgba(16, 185, 129, ${alpha})`);
-                gradient.addColorStop(1, `rgba(99, 102, 241, ${alpha * 0.5})`);
-                
+
+        for (let s = 0; s < srcPos.length; s++) {
+            const sp = srcPos[s];
+            const sa = Math.abs(srcAct[sp.nodeIndex] || 0);
+            if (sa < 0.04) continue;
+
+            for (let t = 0; t < tgtPos.length; t++) {
+                const tp = tgtPos[t];
+                const ta = Math.abs(tgtAct[tp.nodeIndex] || 0);
+                if (ta < 0.04) continue;
+
+                const strength = Math.sqrt(sa * ta);
+                const alpha = Math.min(0.55, strength * 0.8);
+                if (alpha < 0.04) continue;
+
+                // warm amber → teal gradient
+                const grad = ctx.createLinearGradient(sp.x, sp.y, tp.x, tp.y);
+                grad.addColorStop(0,   `rgba(232,164,74,${alpha * 0.45})`);
+                grad.addColorStop(0.5, `rgba(62,201,167,${alpha})`);
+                grad.addColorStop(1,   `rgba(232,164,74,${alpha * 0.45})`);
+
                 ctx.beginPath();
-                ctx.moveTo(sourcePos.x, sourcePos.y);
-                ctx.lineTo(targetPos.x, targetPos.y);
-                ctx.strokeStyle = gradient;
-                ctx.lineWidth = Math.max(0.5, strength * 2.5);
+                ctx.moveTo(sp.x, sp.y);
+                ctx.lineTo(tp.x, tp.y);
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = Math.max(0.4, strength * 2);
                 ctx.stroke();
             }
         }
     }
 
-    // Draw a single node with glow effect
+    /* ── single node ── */
     drawNode(x, y, activation, isOutput = false, label = null) {
         const ctx = this.ctx;
-        const radius = isOutput ? this.nodeRadius + 4 : this.nodeRadius;
-        
-        // Determine color and glow based on activation
-        let fillColor, glowColor, strokeColor;
+        const r = isOutput ? this.nodeRadius + 3 : this.nodeRadius;
         const act = activation || 0;
-        
+
+        let fill, stroke, glow;
+
         if (act > 0.5) {
-            // High activation - green glow
-            const intensity = Math.min(1, act);
-            fillColor = `rgba(16, 185, 129, ${0.6 + intensity * 0.4})`;
-            glowColor = `rgba(16, 185, 129, ${intensity * 0.8})`;
-            strokeColor = '#10b981';
+            const t = Math.min(1, act);
+            fill   = `rgba(62,201,167,${0.55 + t * 0.45})`;
+            stroke = '#3EC9A7';
+            glow   = this.colors.coolGlow;
         } else if (act > 0.1) {
-            // Medium activation - purple/blue
-            const intensity = act / 0.5;
-            fillColor = `rgba(99, 102, 241, ${0.4 + intensity * 0.5})`;
-            glowColor = `rgba(99, 102, 241, ${intensity * 0.5})`;
-            strokeColor = '#6366f1';
+            const t = act / 0.5;
+            fill   = `rgba(232,164,74,${0.35 + t * 0.5})`;
+            stroke = '#E8A44A';
+            glow   = this.colors.hotGlow;
         } else {
-            // Low/no activation
-            fillColor = this.colors.neutral;
-            glowColor = 'transparent';
-            strokeColor = '#4a4a5a';
+            fill   = this.colors.dim;
+            stroke = this.colors.dimStroke;
+            glow   = null;
         }
-        
-        // Draw glow effect for active nodes
-        if (act > 0.1) {
+
+        // glow ring
+        if (glow) {
             ctx.save();
-            ctx.shadowColor = glowColor;
-            ctx.shadowBlur = act > 0.5 ? 15 : 8;
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = fillColor;
+            ctx.shadowColor = glow;
+            ctx.shadowBlur = act > 0.5 ? 14 : 7;
+            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = fill;
             ctx.fill();
             ctx.restore();
         }
-        
-        // Draw node
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = fillColor;
+
+        // solid disc
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = fill;
         ctx.fill();
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 1.2;
         ctx.stroke();
-        
-        // Draw label for output nodes
+
+        // output digit labels
         if (label !== null) {
-            ctx.fillStyle = activation > 0.3 ? '#fff' : this.colors.text;
-            ctx.font = 'bold 12px Inter, -apple-system, sans-serif';
+            ctx.fillStyle = act > 0.3 ? '#0E110D' : this.colors.text;
+            ctx.font = `bold 10px 'IBM Plex Mono', monospace`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(label, x, y);
         }
     }
 
-    // Draw layer labels with modern styling
     drawLayerLabels() {
         const ctx = this.ctx;
-        
-        this.layerPositions.forEach((layer, index) => {
-            // Main label
-            ctx.fillStyle = this.colors.text;
-            ctx.font = '600 12px Inter, -apple-system, sans-serif';
+        this.layerPositions.forEach(layer => {
+            ctx.fillStyle = this.colors.textDim;
+            ctx.font = `600 9px 'IBM Plex Mono', monospace`;
             ctx.textAlign = 'center';
-            ctx.fillText(layer.name, layer.x, this.height - 35);
-            
-            // Sub label
-            ctx.fillStyle = this.colors.textSecondary;
-            ctx.font = '400 10px Inter, -apple-system, sans-serif';
-            ctx.fillText(layer.subtext, layer.x, this.height - 20);
+            ctx.letterSpacing = '1px';
+            ctx.fillText(layer.name, layer.x, this.height - 30);
+
+            ctx.fillStyle = this.colors.textDim;
+            ctx.font = `400 8px 'IBM Plex Mono', monospace`;
+            ctx.fillText(layer.sub + ' n', layer.x, this.height - 18);
         });
     }
 
-    // Draw ellipsis to indicate more nodes
-    drawEllipsis(x, y1, y2) {
-        const ctx = this.ctx;
-        ctx.fillStyle = this.colors.textSecondary;
-        const midY = (y1 + y2) / 2;
-        for (let i = -1; i <= 1; i++) {
-            ctx.beginPath();
-            ctx.arc(x, midY + i * 10, 3, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-
-    // Main render function
+    /* ── main render ── */
     render(network) {
+        this.resize();
         this.clear();
-        
-        const activations = network.getActivations();
-        const architecture = network.getArchitecture();
-        
-        // Get node positions for each layer
-        const inputPositions = this.getNodePositions(0, architecture.layers[0].size);
-        const hidden1Positions = this.getNodePositions(1, architecture.layers[1].size);
-        const hidden2Positions = this.getNodePositions(2, architecture.layers[2].size);
-        const outputPositions = this.getNodePositions(3, architecture.layers[3].size);
-        
-        // Draw connections (back to front for proper layering)
-        if (activations.hidden2 && activations.output) {
-            this.drawConnections(
-                hidden2Positions, outputPositions, 
-                activations.hidden2, activations.output);
-        }
-        
-        if (activations.hidden1 && activations.hidden2) {
-            this.drawConnections(
-                hidden1Positions, hidden2Positions, 
-                activations.hidden1, activations.hidden2);
-        }
-        
-        if (activations.input && activations.hidden1) {
-            this.drawConnections(
-                inputPositions, hidden1Positions, 
-                activations.input, activations.hidden1);
-        }
-        
-        // Draw input layer nodes
-        inputPositions.forEach((pos, i) => {
-            const activation = activations.input ? activations.input[pos.nodeIndex] : 0;
-            this.drawNode(pos.x, pos.y, activation);
-        });
-        
-        // Draw hidden layer 1 nodes
-        hidden1Positions.forEach((pos, i) => {
-            const activation = activations.hidden1 ? activations.hidden1[pos.nodeIndex] : 0;
-            this.drawNode(pos.x, pos.y, activation);
-        });
-        
-        // Draw hidden layer 2 nodes
-        hidden2Positions.forEach((pos, i) => {
-            const activation = activations.hidden2 ? activations.hidden2[pos.nodeIndex] : 0;
-            this.drawNode(pos.x, pos.y, activation);
-        });
-        
-        // Draw output layer nodes with digit labels
-        outputPositions.forEach((pos, i) => {
-            const activation = activations.output ? activations.output[pos.nodeIndex] : 0;
-            this.drawNode(pos.x, pos.y, activation, true, pos.nodeIndex.toString());
-        });
-        
-        // Draw layer labels
+
+        const activations   = network.getActivations();
+        const architecture  = network.getArchitecture();
+
+        const ip = this.getNodePositions(0, architecture.layers[0].size);
+        const h1 = this.getNodePositions(1, architecture.layers[1].size);
+        const h2 = this.getNodePositions(2, architecture.layers[2].size);
+        const op = this.getNodePositions(3, architecture.layers[3].size);
+
+        // connections back-to-front
+        if (activations.hidden2 && activations.output)
+            this.drawConnections(h2, op, activations.hidden2, activations.output);
+        if (activations.hidden1 && activations.hidden2)
+            this.drawConnections(h1, h2, activations.hidden1, activations.hidden2);
+        if (activations.input && activations.hidden1)
+            this.drawConnections(ip, h1, activations.input, activations.hidden1);
+
+        // nodes
+        ip.forEach(p => this.drawNode(p.x, p.y, activations.input  ? activations.input[p.nodeIndex]  : 0));
+        h1.forEach(p => this.drawNode(p.x, p.y, activations.hidden1? activations.hidden1[p.nodeIndex]: 0));
+        h2.forEach(p => this.drawNode(p.x, p.y, activations.hidden2? activations.hidden2[p.nodeIndex]: 0));
+        op.forEach(p => this.drawNode(p.x, p.y, activations.output ? activations.output[p.nodeIndex] : 0, true, p.nodeIndex.toString()));
+
         this.drawLayerLabels();
-        
-        // Draw title with gradient effect
-        this.ctx.fillStyle = this.colors.text;
-        this.ctx.font = '600 14px Inter, -apple-system, sans-serif';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('Neural Network Architecture', this.width / 2, 25);
     }
 
-    // Render empty state
     renderEmpty() {
+        this.resize();
         this.clear();
-        
-        // Draw placeholder nodes
-        this.layerPositions.forEach((layer, layerIdx) => {
-            const numNodes = layer.displaySize;
-            const positions = this.getNodePositions(layerIdx, numNodes);
-            
-            positions.forEach((pos, i) => {
-                this.drawNode(pos.x, pos.y, 0, layerIdx === 3, layerIdx === 3 ? pos.nodeIndex.toString() : null);
+
+        this.layerPositions.forEach((layer, li) => {
+            const pos = this.getNodePositions(li, layer.displaySize);
+            pos.forEach(p => {
+                this.drawNode(p.x, p.y, 0, li === 3, li === 3 ? p.nodeIndex.toString() : null);
             });
         });
-        
+
         this.drawLayerLabels();
-        
-        // Draw instruction
-        this.ctx.fillStyle = this.colors.textSecondary;
-        this.ctx.font = '500 14px Inter, -apple-system, sans-serif';
+
+        // hint
+        this.ctx.fillStyle = this.colors.textDim;
+        this.ctx.font = `500 11px 'DM Sans', sans-serif`;
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('Draw a digit to see activations', this.width / 2, 25);
+        this.ctx.fillText('Draw a digit to see activations', this.width / 2, 20);
     }
 }
 
-// Export for use in other files
 window.NetworkVisualizer = NetworkVisualizer;

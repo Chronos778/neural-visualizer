@@ -1,55 +1,77 @@
 /**
- * Main Application Module
+ * Digit Recognition App — rewired for "Lab Instrument" UI
  */
 
 class DigitRecognitionApp {
     constructor() {
-        this.drawingCanvas = document.getElementById('drawingCanvas');
-        this.drawingCtx = this.drawingCanvas.getContext('2d');
-        this.networkCanvas = document.getElementById('networkCanvas');
-        
-        this.clearBtn = document.getElementById('clearBtn');
-        this.predictBtn = document.getElementById('predictBtn');
-        this.brushSizeSlider = document.getElementById('brushSize');
-        this.brushSizeValue = document.getElementById('brushSizeValue');
-        this.predictedDigit = document.getElementById('predictedDigit');
-        this.confidence = document.getElementById('confidence');
-        this.probabilityBars = document.getElementById('probabilityBars');
-        this.pixelPreview = document.getElementById('pixelPreview');
-        
+        // Canvas
+        this.drawingCanvas  = document.getElementById('drawingCanvas');
+        this.drawingCtx     = this.drawingCanvas.getContext('2d');
+        this.networkCanvas  = document.getElementById('networkCanvas');
+
+        // Controls
+        this.clearBtn       = document.getElementById('clearBtn');
+        this.predictBtn     = document.getElementById('predictBtn');
+        this.brushSlider    = document.getElementById('brushSize');
+        this.brushValue     = document.getElementById('brushSizeValue');
+
+        // Readout
+        this.digitEl        = document.getElementById('predictedDigit');
+        this.confEl         = document.getElementById('confidence');
+        this.barsEl         = document.getElementById('probabilityBars');
+        this.pixelPreview   = document.getElementById('pixelPreview');
+
+        // Status LED
+        this.led            = document.getElementById('statusLed');
+        this.statusText     = document.getElementById('statusText');
+
+        // Drawing state
         this.isDrawing = false;
-        this.brushSize = 22;
-        this.lastPos = null;
+        this.brushSize = 20;
+        this.lastPos   = null;
         this.predictionTimeout = null;
-        
+
         this.visualizer = new NetworkVisualizer(this.networkCanvas);
-        
-        this.showLoadingState();
+
+        this.setStatus('connecting');
         this.waitForModel();
         this.init();
     }
 
-    showLoadingState() {
-        this.predictedDigit.textContent = '...';
-        this.confidence.textContent = 'Connecting to server...';
-        this.predictBtn.disabled = true;
-        this.predictBtn.textContent = 'Loading...';
+    /* ── status LED helper ── */
+    setStatus(state) {
+        this.led.classList.remove('on', 'err');
+        switch (state) {
+            case 'ok':
+                this.led.classList.add('on');
+                this.statusText.textContent = 'ONLINE';
+                break;
+            case 'err':
+                this.led.classList.add('err');
+                this.statusText.textContent = 'OFFLINE';
+                break;
+            case 'connecting':
+                this.statusText.textContent = 'CONNECTING';
+                break;
+        }
     }
 
     async waitForModel() {
         this.network = new NeuralNetwork();
+        this.predictBtn.disabled = true;
+
         const connected = await this.network.initialize();
-        
+
         if (connected) {
-            this.predictedDigit.textContent = '?';
-            this.confidence.textContent = 'Draw a digit';
-            this.predictBtn.disabled = false;
-            this.predictBtn.textContent = 'Predict';
+            this.setStatus('ok');
+            this.digitEl.textContent  = '?';
+            this.confEl.textContent   = 'Draw a digit';
+            this.predictBtn.disabled  = false;
         } else {
-            this.predictedDigit.textContent = '!';
-            this.confidence.textContent = 'Server not running. Run: python server.py';
-            this.predictBtn.disabled = false;
-            this.predictBtn.textContent = 'Retry';
+            this.setStatus('err');
+            this.digitEl.textContent  = '!';
+            this.confEl.textContent   = 'Run: python server.py';
+            this.predictBtn.disabled  = false;
         }
         this.visualizer.renderEmpty();
     }
@@ -63,105 +85,98 @@ class DigitRecognitionApp {
     }
 
     setupCanvas() {
-        this.drawingCtx.fillStyle = '#000000';
+        this.drawingCtx.fillStyle   = '#000';
         this.drawingCtx.fillRect(0, 0, this.drawingCanvas.width, this.drawingCanvas.height);
-        this.drawingCtx.lineCap = 'round';
-        this.drawingCtx.lineJoin = 'round';
-        this.drawingCtx.strokeStyle = '#ffffff';
-        this.drawingCtx.lineWidth = this.brushSize;
-        
-        // Set brush size slider default
-        this.brushSizeSlider.value = this.brushSize;
-        this.brushSizeValue.textContent = this.brushSize;
+        this.drawingCtx.lineCap     = 'round';
+        this.drawingCtx.lineJoin    = 'round';
+        this.drawingCtx.strokeStyle = '#fff';
+        this.drawingCtx.lineWidth   = this.brushSize;
+
+        this.brushSlider.value       = this.brushSize;
+        this.brushValue.textContent  = this.brushSize;
     }
 
     setupPixelPreview() {
         this.pixelPreview.innerHTML = '';
         for (let i = 0; i < 28 * 28; i++) {
-            const pixel = document.createElement('div');
-            pixel.className = 'pixel';
-            this.pixelPreview.appendChild(pixel);
+            const p = document.createElement('div');
+            p.className = 'pixel';
+            this.pixelPreview.appendChild(p);
         }
     }
 
     setupProbabilityBars() {
-        this.probabilityBars.innerHTML = '';
+        this.barsEl.innerHTML = '';
         for (let i = 0; i < 10; i++) {
             const row = document.createElement('div');
             row.className = 'prob-row';
             row.innerHTML = `
                 <span class="prob-label" id="prob-label-${i}">${i}</span>
                 <div class="prob-bar-container">
-                    <div class="prob-bar" id="prob-bar-${i}" style="width: 0%"></div>
+                    <div class="prob-bar" id="prob-bar-${i}" style="width:0%"></div>
                 </div>
                 <span class="prob-value" id="prob-value-${i}">0%</span>
             `;
-            this.probabilityBars.appendChild(row);
+            this.barsEl.appendChild(row);
         }
     }
 
+    /* ── events ── */
     bindEvents() {
-        this.drawingCanvas.addEventListener('mousedown', (e) => this.startDrawing(e));
-        this.drawingCanvas.addEventListener('mousemove', (e) => this.draw(e));
-        this.drawingCanvas.addEventListener('mouseup', () => this.stopDrawing());
+        this.drawingCanvas.addEventListener('mousedown',  e => this.startDrawing(e));
+        this.drawingCanvas.addEventListener('mousemove',  e => this.draw(e));
+        this.drawingCanvas.addEventListener('mouseup',    () => this.stopDrawing());
         this.drawingCanvas.addEventListener('mouseleave', () => this.stopDrawing());
-        
-        this.drawingCanvas.addEventListener('touchstart', (e) => this.handleTouch(e, 'start'), { passive: false });
-        this.drawingCanvas.addEventListener('touchmove', (e) => this.handleTouch(e, 'move'), { passive: false });
-        this.drawingCanvas.addEventListener('touchend', () => this.stopDrawing());
-        
-        this.clearBtn.addEventListener('click', () => this.clearCanvas());
+
+        this.drawingCanvas.addEventListener('touchstart', e => this.handleTouch(e, 'start'), { passive: false });
+        this.drawingCanvas.addEventListener('touchmove',  e => this.handleTouch(e, 'move'),  { passive: false });
+        this.drawingCanvas.addEventListener('touchend',   () => this.stopDrawing());
+
+        this.clearBtn.addEventListener('click',   () => this.clearCanvas());
         this.predictBtn.addEventListener('click', () => this.predict());
-        
-        this.brushSizeSlider.addEventListener('input', (e) => {
+
+        this.brushSlider.addEventListener('input', e => {
             this.brushSize = parseInt(e.target.value);
-            this.brushSizeValue.textContent = this.brushSize;
+            this.brushValue.textContent = this.brushSize;
             this.drawingCtx.lineWidth = this.brushSize;
         });
+
+        window.addEventListener('resize', () => this.visualizer.renderEmpty());
     }
 
     getCanvasCoordinates(e) {
-        const rect = this.drawingCanvas.getBoundingClientRect();
-        const scaleX = this.drawingCanvas.width / rect.width;
-        const scaleY = this.drawingCanvas.height / rect.height;
-        
-        return {
-            x: (e.clientX - rect.left) * scaleX,
-            y: (e.clientY - rect.top) * scaleY
-        };
+        const r  = this.drawingCanvas.getBoundingClientRect();
+        const sx = this.drawingCanvas.width  / r.width;
+        const sy = this.drawingCanvas.height / r.height;
+        return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
     }
 
     handleTouch(e, type) {
         e.preventDefault();
-        const touch = e.touches[0];
-        const mouseEvent = { clientX: touch.clientX, clientY: touch.clientY };
-        
-        if (type === 'start') this.startDrawing(mouseEvent);
-        else if (type === 'move') this.draw(mouseEvent);
+        const t = e.touches[0];
+        const me = { clientX: t.clientX, clientY: t.clientY };
+        if (type === 'start') this.startDrawing(me);
+        else this.draw(me);
     }
 
     startDrawing(e) {
         this.isDrawing = true;
         this.lastPos = this.getCanvasCoordinates(e);
-        
         this.drawingCtx.beginPath();
         this.drawingCtx.arc(this.lastPos.x, this.lastPos.y, this.brushSize / 2, 0, Math.PI * 2);
-        this.drawingCtx.fillStyle = '#ffffff';
+        this.drawingCtx.fillStyle = '#fff';
         this.drawingCtx.fill();
     }
 
     draw(e) {
         if (!this.isDrawing) return;
-        
         const pos = this.getCanvasCoordinates(e);
-        
         this.drawingCtx.beginPath();
         this.drawingCtx.moveTo(this.lastPos.x, this.lastPos.y);
         this.drawingCtx.lineTo(pos.x, pos.y);
         this.drawingCtx.stroke();
-        
         this.lastPos = pos;
-        
+
         if (this.predictionTimeout) clearTimeout(this.predictionTimeout);
         this.predictionTimeout = setTimeout(() => this.predict(), 100);
     }
@@ -175,110 +190,89 @@ class DigitRecognitionApp {
     }
 
     clearCanvas() {
-        this.drawingCtx.fillStyle = '#000000';
+        this.drawingCtx.fillStyle = '#000';
         this.drawingCtx.fillRect(0, 0, this.drawingCanvas.width, this.drawingCanvas.height);
-        
-        this.predictedDigit.textContent = '?';
-        this.confidence.textContent = 'Draw a digit';
-        
+        this.digitEl.textContent = '?';
+        this.confEl.textContent  = 'Draw a digit';
+        this.confEl.classList.remove('high');
+
         for (let i = 0; i < 10; i++) {
-            document.getElementById(`prob-bar-${i}`).style.width = '0%';
-            document.getElementById(`prob-bar-${i}`).classList.remove('winner');
+            const bar = document.getElementById(`prob-bar-${i}`);
+            const lbl = document.getElementById(`prob-label-${i}`);
+            bar.style.width = '0%';
+            bar.classList.remove('winner');
+            lbl.classList.remove('winner');
             document.getElementById(`prob-value-${i}`).textContent = '0%';
         }
-        
-        const pixels = this.pixelPreview.querySelectorAll('.pixel');
-        pixels.forEach(pixel => pixel.style.backgroundColor = '#000');
-        
+        this.pixelPreview.querySelectorAll('.pixel').forEach(p => p.style.backgroundColor = '#000');
         this.visualizer.renderEmpty();
     }
 
     getPixelData() {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = 28;
-        tempCanvas.height = 28;
-        const tempCtx = tempCanvas.getContext('2d');
-        
-        // Use better interpolation
-        tempCtx.imageSmoothingEnabled = true;
-        tempCtx.imageSmoothingQuality = 'high';
-        tempCtx.drawImage(this.drawingCanvas, 0, 0, 28, 28);
-        
-        const imageData = tempCtx.getImageData(0, 0, 28, 28);
-        const pixels = [];
-        
-        for (let i = 0; i < imageData.data.length; i += 4) {
-            const gray = imageData.data[i] / 255;
-            pixels.push(gray);
-        }
-        
-        this.updatePixelPreview(pixels);
-        return pixels;
+        const tc = document.createElement('canvas');
+        tc.width = 28; tc.height = 28;
+        const tctx = tc.getContext('2d');
+        tctx.imageSmoothingEnabled = true;
+        tctx.imageSmoothingQuality = 'high';
+        tctx.drawImage(this.drawingCanvas, 0, 0, 28, 28);
+
+        const id = tctx.getImageData(0, 0, 28, 28);
+        const px = [];
+        for (let i = 0; i < id.data.length; i += 4) px.push(id.data[i] / 255);
+        this.updatePixelPreview(px);
+        return px;
     }
 
     updatePixelPreview(pixels) {
-        const previewPixels = this.pixelPreview.querySelectorAll('.pixel');
-        pixels.forEach((value, i) => {
-            const brightness = Math.floor(value * 255);
-            previewPixels[i].style.backgroundColor = `rgb(${brightness}, ${brightness}, ${brightness})`;
+        const cells = this.pixelPreview.querySelectorAll('.pixel');
+        pixels.forEach((v, i) => {
+            const b = Math.floor(v * 255);
+            cells[i].style.backgroundColor = `rgb(${b},${b},${b})`;
         });
     }
 
     async predict() {
         if (!this.network || !this.network.isReady) {
-            // Try to reconnect
-            const connected = await this.network.initialize();
-            if (!connected) {
-                this.confidence.textContent = 'Server not running. Run: python server.py';
-                return;
-            }
+            const ok = await this.network.initialize();
+            if (!ok) { this.confEl.textContent = 'Server offline'; this.setStatus('err'); return; }
+            this.setStatus('ok');
         }
-        
+
         const pixels = this.getPixelData();
-        const totalBrightness = pixels.reduce((sum, p) => sum + p, 0);
-        if (totalBrightness < 3) return;
-        
+        if (pixels.reduce((s, p) => s + p, 0) < 3) return;
+
         const result = await this.network.predict(pixels);
-        
-        if (result.error) {
-            this.confidence.textContent = result.error;
-            return;
-        }
-        
-        this.updatePredictionDisplay(result);
+        if (result.error) { this.confEl.textContent = result.error; return; }
+
+        this.updateReadout(result);
         this.visualizer.render(this.network);
     }
 
-    updatePredictionDisplay(result) {
-        this.predictedDigit.textContent = result.digit;
-        const confidencePercent = (result.confidence * 100).toFixed(1);
-        this.confidence.textContent = `Confidence: ${confidencePercent}%`;
-        
-        // Add high confidence styling
-        if (result.confidence > 0.8) {
-            this.confidence.classList.add('high');
-        } else {
-            this.confidence.classList.remove('high');
-        }
-        
-        // Add active class to prediction display
-        this.predictedDigit.parentElement.classList.add('active');
-        
+    updateReadout(result) {
+        this.digitEl.textContent = result.digit;
+        this.digitEl.classList.add('active');
+        setTimeout(() => this.digitEl.classList.remove('active'), 300);
+
+        const pct = (result.confidence * 100).toFixed(1);
+        this.confEl.textContent = pct + ' %';
+        if (result.confidence > 0.8) this.confEl.classList.add('high');
+        else this.confEl.classList.remove('high');
+
         result.probabilities.forEach((prob, i) => {
-            const percentage = (prob * 100).toFixed(1);
+            const p = (prob * 100).toFixed(1);
             const bar = document.getElementById(`prob-bar-${i}`);
-            const value = document.getElementById(`prob-value-${i}`);
-            const label = document.getElementById(`prob-label-${i}`);
-            
-            bar.style.width = `${percentage}%`;
-            value.textContent = `${percentage}%`;
-            
+            const val = document.getElementById(`prob-value-${i}`);
+            const lbl = document.getElementById(`prob-label-${i}`);
+
+            bar.style.width    = p + '%';
+            val.textContent    = p + '%';
+
             if (i === result.digit) {
                 bar.classList.add('winner');
-                if (label) label.classList.add('winner');
+                lbl.classList.add('winner');
             } else {
                 bar.classList.remove('winner');
-                if (label) label.classList.remove('winner');
+                lbl.classList.remove('winner');
             }
         });
     }

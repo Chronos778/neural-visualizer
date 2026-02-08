@@ -2,84 +2,104 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description" content="Interactive neural network visualizer for handwritten digit recognition. Draw a digit and watch the AI recognize it in real-time.">
-    <meta name="keywords" content="neural network, machine learning, digit recognition, MNIST, visualization, AI, deep learning">
-    <meta name="author" content="Neural Network Visualizer">
-    <meta name="theme-color" content="#0a0a0f">
-    
-    <!-- Open Graph / Social Media -->
-    <meta property="og:title" content="Neural Network Digit Recognizer">
-    <meta property="og:description" content="Draw a digit and watch how AI recognizes it with live neural network visualization">
-    <meta property="og:type" content="website">
-    
-    <!-- Favicon -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Interactive neural network visualizer for handwritten digit recognition.">
+    <meta name="theme-color" content="#1C1B1A">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
-    
-    <title>Neural Network Digit Recognizer | AI Visualization</title>
+    <title>Neural Network Digit Recognizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Neural Network Visualizer</h1>
-            <p class="subtitle">Draw a digit and watch how the neural network recognizes it</p>
+
+    <!-- ═══ SHELL ═══ -->
+    <div class="shell">
+
+        <!-- ── TOP STRIP ── -->
+        <header class="strip">
+            <div class="strip__left">
+                <span class="strip__mark">◈</span>
+                <h1 class="strip__title">Neural Network Visualizer</h1>
+            </div>
+            <div class="strip__right">
+                <span class="strip__led" id="statusLed"></span>
+                <span class="strip__status" id="statusText">STANDBY</span>
+            </div>
         </header>
 
-        <div class="main-content">
-            <!-- Drawing Section -->
-            <section class="drawing-section">
-                <h2>Draw a Digit (0-9)</h2>
-                <div class="canvas-container">
+        <!-- ── WORKBENCH (split layout) ── -->
+        <main class="workbench">
+
+            <!-- LEFT PANE: Input -->
+            <div class="pane pane--input">
+                <div class="pane__head">
+                    <span class="pane__tag">INPUT</span>
+                    <span class="pane__sub">Handwritten 0–9</span>
+                </div>
+                <div class="drawing-frame">
                     <canvas id="drawingCanvas" width="280" height="280"></canvas>
+                </div>
+                <div class="toolbar">
+                    <button id="clearBtn" class="tb-btn">
+                        <span class="tb-btn__icon">✕</span> Clear
+                    </button>
+                    <div class="tb-slider">
+                        <label for="brushSize">Brush</label>
+                        <input type="range" id="brushSize" min="10" max="40" value="20" aria-label="Brush size">
+                        <span id="brushSizeValue" class="tb-slider__val">20</span>
+                    </div>
+                    <button id="predictBtn" class="tb-btn tb-btn--run">
+                        <span class="tb-btn__icon">▶</span> Predict
+                    </button>
+                </div>
+                <!-- 28x28 thumbnail -->
+                <details class="preview-toggle">
+                    <summary>28×28 downsampled</summary>
                     <div class="pixel-preview" id="pixelPreview"></div>
-                </div>
-                <div class="controls">
-                    <button id="clearBtn" class="btn btn-secondary">Clear</button>
-                    <button id="predictBtn" class="btn btn-primary">Predict</button>
-                </div>
-                <div class="brush-size">
-                    <label><span>Brush Size</span><span id="brushSizeValue">20</span></label>
-                    <input type="range" id="brushSize" min="10" max="40" value="20">
-                </div>
-            </section>
+                </details>
+            </div>
 
-            <!-- Prediction Results - Moved before visualization for mobile -->
-            <section class="results-section">
-                <h2>Prediction Results</h2>
-                <div class="prediction-display">
-                    <div class="predicted-digit" id="predictedDigit">?</div>
-                    <div class="confidence" id="confidence">Draw a digit to see prediction</div>
-                </div>
-                <div class="probability-bars" id="probabilityBars">
-                    <!-- Probability bars will be generated by JavaScript -->
-                </div>
-            </section>
+            <!-- DIVIDER -->
+            <div class="divider"></div>
 
-            <!-- Network Visualization -->
-            <section class="visualization-section">
-                <h2>Network Architecture</h2>
-                <div class="network-container">
-                    <canvas id="networkCanvas" width="900" height="550"></canvas>
-                </div>
-                <div class="legend">
-                    <div class="legend-item">
-                        <span class="legend-color positive"></span>
-                        <span>Active</span>
+            <!-- RIGHT PANE: Readout + Network -->
+            <div class="pane pane--output">
+
+                <!-- Readout row -->
+                <div class="readout">
+                    <div class="readout__digit-wrap">
+                        <span class="readout__label">DETECTED</span>
+                        <span class="readout__digit" id="predictedDigit">?</span>
                     </div>
-                    <div class="legend-item">
-                        <span class="legend-color neutral"></span>
-                        <span>Inactive</span>
+                    <div class="readout__conf-wrap">
+                        <span class="readout__label">CONFIDENCE</span>
+                        <span class="readout__conf" id="confidence">—</span>
+                    </div>
+                    <div class="readout__bars" id="probabilityBars">
+                        <!-- JS fills this -->
                     </div>
                 </div>
-            </section>
-        </div>
 
-        <footer>
-            <p>Neural Network Digit Recognizer • Powered by TensorFlow</p>
-            <p class="footer-links">
-                <a href="https://github.com/yourusername/neural-network-visualizer" target="_blank" rel="noopener">GitHub</a>
-            </p>
+                <!-- Network canvas -->
+                <div class="scope">
+                    <div class="scope__label">NETWORK — 784 → 128 → 64 → 10</div>
+                    <div class="scope__screen">
+                        <canvas id="networkCanvas" width="900" height="420"></canvas>
+                    </div>
+                    <div class="scope__legend">
+                        <span class="scope__legend-item"><i class="dot dot--on"></i> Active</span>
+                        <span class="scope__legend-item"><i class="dot dot--off"></i> Inactive</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ── FOOTER STRIP ── -->
+        <footer class="strip strip--foot">
+            <span>Powered by TensorFlow · MNIST Dataset</span>
+            <a href="https://github.com/Chronos778/neural-visualizer" target="_blank" rel="noopener">GitHub ↗</a>
         </footer>
     </div>
 
