@@ -14,6 +14,22 @@ class NetworkVisualizer {
         this.layerPositions = [];
         this.nodeRadius = 8;
 
+        // Smoothed activations for softer motion
+        this.targetActivations = {
+            input: new Array(784).fill(0),
+            hidden1: new Array(128).fill(0),
+            hidden2: new Array(64).fill(0),
+            output: new Array(10).fill(0)
+        };
+        this.displayActivations = {
+            input: new Array(784).fill(0),
+            hidden1: new Array(128).fill(0),
+            hidden2: new Array(64).fill(0),
+            output: new Array(10).fill(0)
+        };
+        this.animationHandle = null;
+        this.architecture = null;
+
         // Analog-instrument palette
         this.colors = {
             hot:        '#E8A44A',   // ember / amber
@@ -202,34 +218,12 @@ class NetworkVisualizer {
         });
     }
 
-    /* ── main render ── */
+    /* ── main render entry ── */
     render(network) {
-        this.resize();
-        this.clear();
-
-        const activations   = network.getActivations();
-        const architecture  = network.getArchitecture();
-
-        const ip = this.getNodePositions(0, architecture.layers[0].size);
-        const h1 = this.getNodePositions(1, architecture.layers[1].size);
-        const h2 = this.getNodePositions(2, architecture.layers[2].size);
-        const op = this.getNodePositions(3, architecture.layers[3].size);
-
-        // connections back-to-front
-        if (activations.hidden2 && activations.output)
-            this.drawConnections(h2, op, activations.hidden2, activations.output);
-        if (activations.hidden1 && activations.hidden2)
-            this.drawConnections(h1, h2, activations.hidden1, activations.hidden2);
-        if (activations.input && activations.hidden1)
-            this.drawConnections(ip, h1, activations.input, activations.hidden1);
-
-        // nodes
-        ip.forEach(p => this.drawNode(p.x, p.y, activations.input  ? activations.input[p.nodeIndex]  : 0));
-        h1.forEach(p => this.drawNode(p.x, p.y, activations.hidden1? activations.hidden1[p.nodeIndex]: 0));
-        h2.forEach(p => this.drawNode(p.x, p.y, activations.hidden2? activations.hidden2[p.nodeIndex]: 0));
-        op.forEach(p => this.drawNode(p.x, p.y, activations.output ? activations.output[p.nodeIndex] : 0, true, p.nodeIndex.toString()));
-
-        this.drawLayerLabels();
+        this.architecture = network.getArchitecture();
+        const activations = network.getActivations();
+        this.setTargets(activations);
+        this.ensureAnimating();
     }
 
     renderEmpty() {
@@ -250,6 +244,69 @@ class NetworkVisualizer {
         this.ctx.font = `500 11px 'DM Sans', sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.fillText('Draw a digit to see activations', this.width / 2, 20);
+    }
+
+    setTargets(activations) {
+        const copy = (src, dst) => {
+            if (!src || !dst) return;
+            const n = Math.min(src.length, dst.length);
+            for (let i = 0; i < n; i++) dst[i] = src[i];
+        };
+        copy(activations.input, this.targetActivations.input);
+        copy(activations.hidden1, this.targetActivations.hidden1);
+        copy(activations.hidden2, this.targetActivations.hidden2);
+        copy(activations.output, this.targetActivations.output);
+    }
+
+    ensureAnimating() {
+        if (this.animationHandle) return;
+        const step = () => {
+            this.animationHandle = requestAnimationFrame(step);
+            this.lerpActivations();
+            this.drawFrame();
+        };
+        step();
+    }
+
+    lerpActivations() {
+        const lerp = (dst, src, factor) => {
+            const n = Math.min(dst.length, src.length);
+            for (let i = 0; i < n; i++) {
+                dst[i] = dst[i] + (src[i] - dst[i]) * factor;
+            }
+        };
+        lerp(this.displayActivations.input, this.targetActivations.input, 0.15);
+        lerp(this.displayActivations.hidden1, this.targetActivations.hidden1, 0.15);
+        lerp(this.displayActivations.hidden2, this.targetActivations.hidden2, 0.18);
+        lerp(this.displayActivations.output, this.targetActivations.output, 0.22);
+    }
+
+    drawFrame() {
+        if (!this.architecture) return;
+        this.resize();
+        this.clear();
+
+        const architecture = this.architecture;
+        const activations = this.displayActivations;
+
+        const ip = this.getNodePositions(0, architecture.layers[0].size);
+        const h1 = this.getNodePositions(1, architecture.layers[1].size);
+        const h2 = this.getNodePositions(2, architecture.layers[2].size);
+        const op = this.getNodePositions(3, architecture.layers[3].size);
+
+        if (activations.hidden2 && activations.output)
+            this.drawConnections(h2, op, activations.hidden2, activations.output);
+        if (activations.hidden1 && activations.hidden2)
+            this.drawConnections(h1, h2, activations.hidden1, activations.hidden2);
+        if (activations.input && activations.hidden1)
+            this.drawConnections(ip, h1, activations.input, activations.hidden1);
+
+        ip.forEach(p => this.drawNode(p.x, p.y, activations.input  ? activations.input[p.nodeIndex]  : 0));
+        h1.forEach(p => this.drawNode(p.x, p.y, activations.hidden1? activations.hidden1[p.nodeIndex]: 0));
+        h2.forEach(p => this.drawNode(p.x, p.y, activations.hidden2? activations.hidden2[p.nodeIndex]: 0));
+        op.forEach(p => this.drawNode(p.x, p.y, activations.output ? activations.output[p.nodeIndex] : 0, true, p.nodeIndex.toString()));
+
+        this.drawLayerLabels();
     }
 }
 
